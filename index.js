@@ -15,6 +15,7 @@ app.use(morgan('tiny'))
 app.use(morgan(':url :method :body'))
 
 app.use(cors())
+app.use(express.static('build'))
 
 var persons = [
       { 
