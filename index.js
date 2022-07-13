@@ -4,92 +4,118 @@ const cors = require('cors')
 
 app = express()
 
+const Person = require('./models/person')
+
 
 morgan.token('body', (req, res) => {
     return JSON.stringify(req.body)
 })
 
+// MIDDLEWARES
+
+const errorHandler = (error, request, response, next) => {  
+    if (error.name === 'CastError') {
+        response.status(400).send({ error: 'malformatted id' })
+    }
+
+    if (error.name === 'ValidationError') {
+        response.status(400).send({
+            error: `Person validation failed: ${error.message}
+        `})
+    }
+        
+    next(error)
+  }
+
+app.use(express.static('build'))
 app.use(express.json())
+
 
 app.use(morgan('tiny'))
 app.use(morgan(':url :method :body'))
 
 app.use(cors())
-app.use(express.static('build'))
-
-var persons = [
-      { 
-        "name": "Arto Hellas", 
-        "number": "040-123456",
-        "id": 1
-      },
-      { 
-        "name": "Ada Lovelace", 
-        "number": "39-44-5323523",
-        "id": 2
-      },
-      { 
-        "name": "Dan Abramov", 
-        "number": "12-43-234345",
-        "id": 3
-      },
-      { 
-        "name": "Mary Poppendieck", 
-        "number": "39-23-6423122",
-        "id": 4
-      }
-    ]
-
 
 
 app.get('/api/persons', morgan('tiny'), (req, res) => {
-    res.send(persons)
-})
-
-app.get('/api/persons/:id', (req, res) => {
-    const id = Number(req.params.id)
     
-    const filteredPersons = persons.filter(person => person.id === id)
-
-    if (filteredPersons.length == 0) {
-        res.status(404).end()
-    } else {
-        res.send(filteredPersons)
-    }
-
+    Person.find({}).then(result => {
+        res.send(result)
+    })
+    
 })
 
-app.delete('/api/persons/:id', (req, res) => {
-    const id = Number(req.params.id)
-    const newPersons = persons.filter(person => person.id !== id)
 
-    persons = newPersons
+app.get('/api/persons/:id', (request, response, next) => {
+    Person.findById(request.params.id)
+      .then(person => {
+        if (person) {
+          response.json(person)
+        } else {
+          response.status(404).end()
+        }
+      })
+      .catch(error => next(error))
+  })
 
-    res.status(200).end()
+app.delete('/api/persons/:id', (req, res, next) => {
+
+
+    Person.findByIdAndRemove(req.params.id)
+    .then (result => {
+        res.status(204).end()
+    })
+    .catch(error => next(error))
+
+    
 })
 
-app.post('/api/persons/', morgan('body'), (req, res) => {
+app.post('/api/persons/', morgan('body'), (req, res, next) => {
     const contact = req.body
 
     if (!contact.name || !contact.number) {
-        res.status(400).end()
-    } else if (persons.filter(person => person.name === contact.name).length > 0) {
-        res.status(400).send({
-            error: 'name must be unique'
+        res.status(400).json({
+            error: 'content missing'
         })
-    }
-     else {
+    } else {
 
-        const newContact = {
+        const newContact = new Person ({
             name: contact.name,
-            number: contact.number,
-            id: Math.floor(Math.random() * 9999)
-        }
+            number: contact.number
+        })
 
-        persons = persons.concat(newContact)
-        res.send(newContact)
+        newContact.save().then(result => {
+            console.log('Saved contact in the db.')
+
+            res.send(result)
+        }).catch(error => next(error))
+        
     }
 })
+
+
+app.put('/api/persons/:id', (req, res, next) => {
+
+    const contact = req.body
+
+    if (contact.name === undefined || contact.number === undefined) {
+        res.status(400).end()
+    } else {
+
+        const person = {
+            name: contact.name,
+            number: contact.number
+        }
+
+        Person.findByIdAndUpdate(req.params.id, person, { new: true })
+        .then(updatedPerson => {
+          res.json(updatedPerson)
+        })
+        .catch(error => next(error))
+    }
+})
+
+
 
 
 app.get('/info', (req, res) => {
@@ -105,3 +131,5 @@ const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
     console.log(`server running on port ${PORT}`)
 })
+
+app.use(errorHandler)
