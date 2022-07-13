@@ -13,7 +13,7 @@ morgan.token('body', (req, res) => {
 
 // MIDDLEWARES
 
-const errorHandler = (error, request, response, next) => {  
+const errorHandler = (error, request, response, next) => {
     if (error.name === 'CastError') {
         response.status(400).send({ error: 'malformatted id' })
     }
@@ -21,11 +21,11 @@ const errorHandler = (error, request, response, next) => {
     if (error.name === 'ValidationError') {
         response.status(400).send({
             error: `Person validation failed: ${error.message}
-        `})
+        ` })
     }
-        
+
     next(error)
-  }
+}
 
 app.use(express.static('build'))
 app.use(express.json())
@@ -38,36 +38,36 @@ app.use(cors())
 
 
 app.get('/api/persons', morgan('tiny'), (req, res) => {
-    
+
     Person.find({}).then(result => {
         res.send(result)
     })
-    
+
 })
 
 
 app.get('/api/persons/:id', (request, response, next) => {
     Person.findById(request.params.id)
-      .then(person => {
-        if (person) {
-          response.json(person)
-        } else {
-          response.status(404).end()
-        }
-      })
-      .catch(error => next(error))
-  })
+        .then(person => {
+            if (person) {
+                response.json(person)
+            } else {
+                response.status(404).end()
+            }
+        })
+        .catch(error => next(error))
+})
 
 app.delete('/api/persons/:id', (req, res, next) => {
 
 
     Person.findByIdAndRemove(req.params.id)
-    .then (result => {
-        res.status(204).end()
-    })
-    .catch(error => next(error))
+        .then (result => {
+            res.status(204).end()
+        })
+        .catch(error => next(error))
 
-    
+
 })
 
 app.post('/api/persons/', morgan('body'), (req, res, next) => {
@@ -89,7 +89,7 @@ app.post('/api/persons/', morgan('body'), (req, res, next) => {
 
             res.send(result)
         }).catch(error => next(error))
-        
+
     }
 })
 
@@ -108,10 +108,10 @@ app.put('/api/persons/:id', (req, res, next) => {
         }
 
         Person.findByIdAndUpdate(req.params.id, person, { new: true })
-        .then(updatedPerson => {
-          res.json(updatedPerson)
-        })
-        .catch(error => next(error))
+            .then(updatedPerson => {
+                res.json(updatedPerson)
+            })
+            .catch(error => next(error))
     }
 })
 
